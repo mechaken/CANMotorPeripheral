@@ -43,9 +43,12 @@ int CANMDPeripheral::connect()
     int value = _can.write(_msg); // 初期設定値の送信を要求
 
     // 初期設定の通信が終わるまでLEDをチカチカさせる
-    if (_led->read() != 1) {
+    if (_led->read() != 1)
+    {
         _led->write(1);
-    } else {
+    }
+    else
+    {
         _led->write(3);
     }
 
@@ -54,7 +57,8 @@ int CANMDPeripheral::connect()
 
 int CANMDPeripheral::decode_can_message(unsigned char *data)
 {
-    if ((data[0] & 0x80) == 0x80) {
+    if ((data[0] & 0x80) == 0x80)
+    {
         decode_initial_value(data);
 
         return 1;
@@ -77,7 +81,8 @@ int CANMDPeripheral::decode_initial_value(unsigned char *data)
 {
     _has_recieved_initial_value = true;
 
-    if ((data[0] & 0x40) == 0x00) {
+    if ((data[0] & 0x40) == 0x00)
+    {
         _msg.data[0] = 1;
         _can.write(_msg); // ACKを送信
 
@@ -97,31 +102,43 @@ int CANMDPeripheral::decode_extention_headers(unsigned char *data, int bit_numbe
     // 110  -> release_time
     // 111  -> reserved for future use
 
-    if (get_particular_bit(data, bit_number++) == 0) {
-        if (get_particular_bit(data, bit_number++) == 0) {
+    if (get_particular_bit(data, bit_number++) == 0)
+    {
+        if (get_particular_bit(data, bit_number++) == 0)
+        {
             // 00
             return 0;
-        } else {
-            if (get_particular_bit(data, bit_number++) == 0) {
+        }
+        else
+        {
+            if (get_particular_bit(data, bit_number++) == 0)
+            {
                 //010
                 int pulse_period = bfloat16_decode(data, bit_number);
                 hal_pulse_period(pulse_period);
 
                 bit_number += 16;
-            } else {
+            }
+            else
+            {
                 // 011
                 _control = (Control)get_particular_bit(data, bit_number++);
             }
         }
-    } else {
-        if (get_particular_bit(data, bit_number++) == 0) {
+    }
+    else
+    {
+        if (get_particular_bit(data, bit_number++) == 0)
+        {
             // 10
             _rise_level = (DutyCycleChangeLevel)int_decode(data, bit_number, 3);
             bit_number += 3;
 
             _fall_level = (DutyCycleChangeLevel)int_decode(data, bit_number, 3);
             bit_number += 3;
-        } else {
+        }
+        else
+        {
             // 110
             _release_time_ms = bfloat16_decode(data, bit_number) * 1000;
             bit_number += 16;
@@ -133,10 +150,11 @@ int CANMDPeripheral::decode_extention_headers(unsigned char *data, int bit_numbe
     return 0;
 }
 
+// 特定のビットの値を返す MSB = bit 0 チェック済み
 int CANMDPeripheral::get_particular_bit(unsigned char *data, int bit_number)
 {
     int subscript = bit_number / 8;
-    int bit_num_of_subscript = bit_number % 8;
+    int bit_num_of_subscript = (7 - bit_number % 8);
 
     if ((data[subscript] >> bit_num_of_subscript) & 0x01)
         return 1;
@@ -155,46 +173,66 @@ void CANMDPeripheral::adjust()
     int current_state = hal_state();
     float difference = _duty_cycle - current_duty_cycle;
 
-    if (current_state != _state) {
+    if (current_state != _state)
+    {
         // @TODO rise と fallの依存関係の解決
-        if (_fall_level == OFF) {
+        if (_fall_level == OFF)
+        {
             tmp_duty_cycle = _duty_cycle;
             tmp_state = _state;
         }
-        if (current_duty_cycle <= _fall_unit) {
+        if (current_duty_cycle <= _fall_unit)
+        {
             tmp_duty_cycle = 0.0f;
             tmp_state = _state;
-        } else if (current_duty_cycle > _fall_unit) {
+        }
+        else if (current_duty_cycle > _fall_unit)
+        {
             tmp_duty_cycle = current_duty_cycle - _fall_unit;
             tmp_state = current_state;
         }
-    } else if (current_duty_cycle != _duty_cycle) {
+    }
+    else if (current_duty_cycle != _duty_cycle)
+    {
         if (current_state == Brake || current_state == Free)
             return;
 
         // 設定値の方が現在のデューティー比より大きいとき
-        if (difference >= _rise_unit) {
+        if (difference >= _rise_unit)
+        {
 
-            if (_rise_level == OFF) {
+            if (_rise_level == OFF)
+            {
                 tmp_duty_cycle = _duty_cycle;
-            } else {
+            }
+            else
+            {
                 tmp_duty_cycle = current_duty_cycle + _rise_unit;
             }
 
             // 設定値の方が現在のデューティー比より小さいとき
-        } else if (difference <= -_fall_unit) {
+        }
+        else if (difference <= -_fall_unit)
+        {
 
-            if (_fall_level == OFF) {
+            if (_fall_level == OFF)
+            {
                 tmp_duty_cycle = _duty_cycle;
-            } else {
+            }
+            else
+            {
                 tmp_duty_cycle = current_duty_cycle + _rise_unit;
             }
 
             // だいたい一緒の時
-        } else {
+        }
+        else
+        {
             tmp_duty_cycle = _duty_cycle;
         }
-    } else {
+    }
+    else
+    {
         // デバッグがしやすいから、宣言時でなくて最後に代入している
         tmp_duty_cycle = _duty_cycle;
         tmp_state = _state;
@@ -206,9 +244,12 @@ void CANMDPeripheral::adjust()
 
 void CANMDPeripheral::release_time_dec()
 {
-    if (_time_out_count == 0) {
+    if (_time_out_count == 0)
+    {
         state(Brake);
-    } else {
+    }
+    else
+    {
         _time_out_count--;
     }
 }
@@ -220,15 +261,16 @@ int CANMDPeripheral::has_recieved_initial_value()
 
 float CANMDPeripheral::convert_level(int level)
 {
-    switch (level) {
-        case Low:
-            return 0.01f;
-        case Middle:
-            return 0.005f;
-        case High:
-            return 0.001f;
-        default:
-            return 0.0f;
+    switch (level)
+    {
+    case Low:
+        return 0.01f;
+    case Middle:
+        return 0.005f;
+    case High:
+        return 0.001f;
+    default:
+        return 0.0f;
     }
 }
 
@@ -238,12 +280,15 @@ float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
 //    int subscript = bit_number / 8;
 //    int bit_num_of_subscript = bit_number % 8;
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++)
+    {
         bit_stream = (bit_stream << 1) | get_particular_bit(data, bit_number++);
     }
 
     return bfloat16::bfloat16_to_float32(bit_stream);
 }
+
+// チェック済み
 int CANMDPeripheral::int_decode(unsigned char *data, int bit_number, int length)
 {
     uint32_t bit_stream;
