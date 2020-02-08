@@ -42,7 +42,7 @@ public:
     };
 
     Motor();
-    
+
     /** Initialize data
     *
     */
@@ -130,6 +130,8 @@ public:
     static const float default_frequency;
     static const float defalut_release_time_ms;
     static const int default_control;
+
+    static const float max_pulse_period;
 
 protected:
     float _duty_cycle;

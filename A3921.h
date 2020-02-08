@@ -17,6 +17,7 @@ public:
     float hal_duty_cycle();
     int hal_state();
     void hal_pulse_period(float seconds);
+    void hal_frequency(float hz);
 
 private:
     DigitalOut _sr;
@@ -24,10 +25,9 @@ private:
     PwmOut _pwml;
     DigitalOut _phase;
     DigitalOut _reset;
-    
+
     float _hal_duty_cycle;
     int _hal_state;
-
 };
 
 #endif
