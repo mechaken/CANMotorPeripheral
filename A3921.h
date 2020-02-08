@@ -9,6 +9,7 @@ class A3921 : public Motor
 public:
     A3921(PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset);
 
+    void hal_reset();
     void reset();
     void recovery();
 

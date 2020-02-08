@@ -6,12 +6,9 @@ CANMDPeripheral::CANMDPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName
     : A3921(sr, pwmh, pwml, phase, reset), _can_p(NULL), _can(can_obj)
 {
     _led = new BusOut(ledh, ledl);
+    _rise_unit = convert_level(_rise_level);
+    _fall_unit = convert_level(_fall_level);
 
-    state(Brake);
-
-    _duty_cycle = 0.0f;
-
-    _release_time_ms = 100;
 }
 
 CANMDPeripheral::~CANMDPeripheral()
@@ -32,7 +29,8 @@ int CANMDPeripheral::id()
 
 int CANMDPeripheral::connect()
 {
-    // IDに応じた待機時間を設ける（他のMDと競合しないようにするため）
+    init();
+    hal_reset();
 
     _msg.id = _id + 1;
     _msg.len = 1;
@@ -43,12 +41,9 @@ int CANMDPeripheral::connect()
     int value = _can.write(_msg); // 初期設定値の送信を要求
 
     // 初期設定の通信が終わるまでLEDをチカチカさせる
-    if (_led->read() != 1)
-    {
+    if (_led->read() != 1) {
         _led->write(1);
-    }
-    else
-    {
+    } else {
         _led->write(3);
     }
 
@@ -57,14 +52,13 @@ int CANMDPeripheral::connect()
 
 int CANMDPeripheral::decode_can_message(unsigned char *data)
 {
-    if ((data[0] & 0x80) == 0x80)
-    {
+    if ((data[0] & 0x80) == 0x80) {
         decode_initial_value(data);
 
         return 1;
     }
 
-    _duty_cycle = (float)((data[0] << 7) + (data[1] << 1) + ((data[2] & 0x80) >> 7)) / 65536.0f; // 2^16 = 65536
+    _duty_cycle = (float)(((data[0] & 0x7F) << 9) + (data[1] << 1) + ((data[2] & 0x80) >> 7)) / 65536.0f; // 2^16 = 65536
 
     _state = (State)((data[2] & 0x60) >> 5);
 
@@ -80,12 +74,16 @@ int CANMDPeripheral::decode_can_message(unsigned char *data)
 int CANMDPeripheral::decode_initial_value(unsigned char *data)
 {
     _has_recieved_initial_value = true;
+    init();
+    hal_reset();
 
-    if ((data[0] & 0x40) == 0x00)
-    {
+    // TODO 初期化のデータが来たら、いったん全部初期化する
+
+    if ((data[0] & 0x40) == 0x00) {
         _msg.data[0] = 1;
         _can.write(_msg); // ACKを送信
 
+        printf("\n");
         decode_extention_headers(data, 2);
     }
 
@@ -101,47 +99,50 @@ int CANMDPeripheral::decode_extention_headers(unsigned char *data, int bit_numbe
     // 10   -> DutyCycle Change Level
     // 110  -> release_time
     // 111  -> reserved for future use
+    // TODO 上昇と下降の値を直接（bfloat16）で指定
 
-    if (get_particular_bit(data, bit_number++) == 0)
-    {
-        if (get_particular_bit(data, bit_number++) == 0)
-        {
+    if (get_particular_bit(data, bit_number++) == 0) {
+        if (get_particular_bit(data, bit_number++) == 0) {
             // 00
+            printf("end\n");
             return 0;
-        }
-        else
-        {
-            if (get_particular_bit(data, bit_number++) == 0)
-            {
+        } else {
+            if (get_particular_bit(data, bit_number++) == 0) {
                 //010
-                int pulse_period = bfloat16_decode(data, bit_number);
+                float pulse_period = bfloat16_decode(data, bit_number);
                 hal_pulse_period(pulse_period);
+                printf("pulse_period: %f\n",pulse_period);
 
                 bit_number += 16;
-            }
-            else
-            {
+            } else {
                 // 011
-                _control = (Control)get_particular_bit(data, bit_number++);
+                // ずらしたのを＋１で戻す
+                _control = (Control)(get_particular_bit(data, bit_number) + 1);
+                bit_number += 1;
+                printf("Control: %d\n",_control);
             }
         }
-    }
-    else
-    {
-        if (get_particular_bit(data, bit_number++) == 0)
-        {
+    } else {
+        if (get_particular_bit(data, bit_number++) == 0) {
             // 10
             _rise_level = (DutyCycleChangeLevel)int_decode(data, bit_number, 3);
+            _rise_unit = convert_level(_rise_level);
             bit_number += 3;
 
             _fall_level = (DutyCycleChangeLevel)int_decode(data, bit_number, 3);
+            _fall_unit = convert_level(_fall_level);
             bit_number += 3;
-        }
-        else
-        {
-            // 110
-            _release_time_ms = bfloat16_decode(data, bit_number) * 1000;
-            bit_number += 16;
+
+            printf("rise: %f, fall: %f", _rise_unit, _fall_unit);
+            printf("Level: %d, %d\n", _rise_level, _fall_level);
+        } else {
+            if (get_particular_bit(data, bit_number++) == 0) {
+                // 110
+                // _release_time_ms = bfloat16_decode(data, bit_number) * 1000;
+                _release_time_ms = bfloat16_decode(data, bit_number);
+                bit_number += 16;
+                printf("release: %d\n", _release_time_ms);
+            }
         }
     }
 
@@ -167,89 +168,89 @@ void CANMDPeripheral::adjust()
     if (_has_recieved_initial_value == false)
         return;
 
-    int tmp_duty_cycle, tmp_state;
+//    hal_set(_duty_cycle, _state);
+//    printf("%f, %d\n", hal_duty_cycle(), hal_state());
 
     float current_duty_cycle = hal_duty_cycle();
     int current_state = hal_state();
     float difference = _duty_cycle - current_duty_cycle;
 
-    if (current_state != _state)
-    {
+    float tmp_duty_cycle;
+    int tmp_state;
+
+    printf("\n\n");
+
+    if (current_state != _state) {
         // @TODO rise と fallの依存関係の解決
-        if (_fall_level == OFF)
-        {
+        if (_fall_level == OFF) {
             tmp_duty_cycle = _duty_cycle;
             tmp_state = _state;
-        }
-        if (current_duty_cycle <= _fall_unit)
-        {
+            printf("1.1\n");
+        } else if (current_duty_cycle <= _fall_unit) {
             tmp_duty_cycle = 0.0f;
             tmp_state = _state;
-        }
-        else if (current_duty_cycle > _fall_unit)
-        {
+            printf("1.2\n");
+            // } else if (current_duty_cycle > _fall_unit) {
+        } else {
             tmp_duty_cycle = current_duty_cycle - _fall_unit;
             tmp_state = current_state;
+            printf("1.3\n");
         }
-    }
-    else if (current_duty_cycle != _duty_cycle)
-    {
-        if (current_state == Brake || current_state == Free)
+    } else if (current_duty_cycle != _duty_cycle) {
+        if (_state == Brake || _state == Free)
             return;
 
-        // 設定値の方が現在のデューティー比より大きいとき
-        if (difference >= _rise_unit)
-        {
+        tmp_state = _state;
 
-            if (_rise_level == OFF)
-            {
+        // 設定値の方が現在のデューティー比より大きいとき
+        if (difference >= _rise_unit) {
+
+            if (_rise_level == OFF) {
                 tmp_duty_cycle = _duty_cycle;
-            }
-            else
-            {
+                printf("3.1\n");
+            } else {
                 tmp_duty_cycle = current_duty_cycle + _rise_unit;
+                printf("3.2\n");
             }
 
             // 設定値の方が現在のデューティー比より小さいとき
-        }
-        else if (difference <= -_fall_unit)
-        {
+        } else if (difference <= -_fall_unit) {
 
-            if (_fall_level == OFF)
-            {
+            if (_fall_level == OFF) {
                 tmp_duty_cycle = _duty_cycle;
-            }
-            else
-            {
-                tmp_duty_cycle = current_duty_cycle + _rise_unit;
+                printf("4\n");
+            } else {
+                tmp_duty_cycle = current_duty_cycle - _fall_unit;
+                printf("5\n");
             }
 
             // だいたい一緒の時
-        }
-        else
-        {
+        } else {
             tmp_duty_cycle = _duty_cycle;
+            tmp_state = _state;
+            printf("6\n");
         }
-    }
-    else
-    {
+    } else {
         // デバッグがしやすいから、宣言時でなくて最後に代入している
         tmp_duty_cycle = _duty_cycle;
         tmp_state = _state;
     }
 
     hal_set(tmp_duty_cycle, tmp_state);
+    printf("pwm %f, state %d\n" ,tmp_duty_cycle, tmp_state);
     _led->write(tmp_state);
 }
 
 void CANMDPeripheral::release_time_dec()
 {
-    if (_time_out_count == 0)
-    {
-        state(Brake);
-    }
-    else
-    {
+    if (_time_out_count == 0) {
+        debug("Release Motor\r");
+
+        // hal_setしないのは急な停止をさせないため（adjust()でだんだんと止めていく）
+        _state = Brake;
+        _duty_cycle = 0.0f;
+        _led->write(Brake);
+    } else {
         _time_out_count--;
     }
 }
@@ -261,27 +262,38 @@ int CANMDPeripheral::has_recieved_initial_value()
 
 float CANMDPeripheral::convert_level(int level)
 {
-    switch (level)
+    // switch (level)
+    // {
+    // case Low:
+    //     return 0.01f;
+    // case Middle:
+    //     return 0.005f;
+    // case High:
+    //     return 0.001f;
+    // default:
+    //     return 0.0f;
+    // }
+    
+    if (level == 0)
     {
-    case Low:
-        return 0.01f;
-    case Middle:
-        return 0.005f;
-    case High:
-        return 0.001f;
-    default:
         return 0.0f;
     }
+
+    float value = .5f;
+    for (int i = 0; i < level; i++) {
+        value *= 0.7;
+    }
+
+    return value;
 }
 
 float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
 {
-    uint16_t bit_stream;
-//    int subscript = bit_number / 8;
-//    int bit_num_of_subscript = bit_number % 8;
+    uint16_t bit_stream = 0;
+    //    int subscript = bit_number / 8;
+    //    int bit_num_of_subscript = bit_number % 8;
 
-    for (int i = 0; i < 16; i++)
-    {
+    for (int i = 0; i < 16; i++) {
         bit_stream = (bit_stream << 1) | get_particular_bit(data, bit_number++);
     }
 
@@ -291,12 +303,11 @@ float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
 // チェック済み
 int CANMDPeripheral::int_decode(unsigned char *data, int bit_number, int length)
 {
-    uint32_t bit_stream;
-//    int subscript = bit_number / 8;
-//    int bit_num_of_subscript = bit_number % 8;
+    uint32_t bit_stream = 0;
+    //    int subscript = bit_number / 8;
+    //    int bit_num_of_subscript = bit_number % 8;
 
-    for (int i = 0; i < length; i++)
-    {
+    for (int i = 0; i < length; i++) {
         bit_stream = (bit_stream << 1) | get_particular_bit(data, bit_number++);
     }
 

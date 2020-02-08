@@ -6,9 +6,11 @@ A3921::A3921(PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName rese
     _reset.write(1);
 }
 
-void A3921::reset()
+void A3921::hal_reset()
 {
-    _reset = 0;
+    // _reset = 0;
+    _pwmh.period(default_pulse_period);
+    _pwml.period(default_pulse_period);
 }
 
 void A3921::recovery()

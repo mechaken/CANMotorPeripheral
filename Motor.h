@@ -18,7 +18,7 @@ public:
         CCW, // Counter Clock Wise
         Brake,
 
-        StateTotalNumber,
+        TotalState,
     };
 
     enum DutyCycleChangeLevel
@@ -29,18 +29,24 @@ public:
         High = 6,
         Max = 7,
 
-        DutyCycleChangeLevelTotalNumber,
+        TotalDutyCycleChangeLevel,
     };
 
-    enum Control{
+    enum Control
+    {
         SlowDecay,
         MixedDecay,
         FastDecay,
 
-        ControlTotalNumber,
+        TotalControl,
     };
 
     Motor();
+    
+    /** Initialize data
+    *
+    */
+    void init();
 
     /** Set the duty cycle
     *
