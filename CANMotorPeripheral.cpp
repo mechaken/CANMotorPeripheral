@@ -1,8 +1,8 @@
-#include "can_md_peripheral.h"
+#include "CANMotorPeripheral.h"
 #include "mbed.h"
 #include "bfloat16.h"
 
-CANMDPeripheral::CANMDPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset, PinName ledh, PinName ledl)
+CANMotorPeripheral::CANMotorPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset, PinName ledh, PinName ledl)
     : A3921(sr, pwmh, pwml, phase, reset), _can_p(NULL), _can(can_obj)
 {
     _led = new BusOut(ledh, ledl);
@@ -10,23 +10,23 @@ CANMDPeripheral::CANMDPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName
     _fall_unit = convert_level(_fall_level);
 }
 
-CANMDPeripheral::~CANMDPeripheral()
+CANMotorPeripheral::~CANMotorPeripheral()
 {
     delete _led;
 }
 
-void CANMDPeripheral::id(int value)
+void CANMotorPeripheral::id(int value)
 {
     if ((0 <= value) && (value <= 0x7FF))
         _id = value;
 }
 
-int CANMDPeripheral::id()
+int CANMotorPeripheral::id()
 {
     return _id;
 }
 
-int CANMDPeripheral::connect()
+int CANMotorPeripheral::connect()
 {
     init();
     hal_reset();
@@ -52,7 +52,7 @@ int CANMDPeripheral::connect()
     return value;
 }
 
-int CANMDPeripheral::decode_can_message(unsigned char *data)
+int CANMotorPeripheral::decode_can_message(unsigned char *data)
 {
     if ((data[0] & 0x80) == 0x80)
     {
@@ -74,7 +74,7 @@ int CANMDPeripheral::decode_can_message(unsigned char *data)
     return 0;
 }
 
-int CANMDPeripheral::decode_initial_value(unsigned char *data)
+int CANMotorPeripheral::decode_initial_value(unsigned char *data)
 {
     _has_recieved_initial_value = true;
     // TODO 初期化のデータが来たら、いったん全部初期化する
@@ -93,7 +93,7 @@ int CANMDPeripheral::decode_initial_value(unsigned char *data)
     return 0;
 }
 
-int CANMDPeripheral::decode_extention_headers(unsigned char *data, int bit_number /* 0 ~ 63 (実質2 ~ 63) */)
+int CANMotorPeripheral::decode_extention_headers(unsigned char *data, int bit_number /* 0 ~ 63 (実質2 ~ 63) */)
 {
     // Extention Headers
     // 00   -> Nothing
@@ -167,7 +167,7 @@ int CANMDPeripheral::decode_extention_headers(unsigned char *data, int bit_numbe
 }
 
 // 特定のビットの値を返す MSB = bit 0
-int CANMDPeripheral::get_particular_bit(unsigned char *data, int bit_number)
+int CANMotorPeripheral::get_particular_bit(unsigned char *data, int bit_number)
 {
     int subscript = bit_number / 8;
     int bit_num_of_subscript = (7 - bit_number % 8);
@@ -178,7 +178,7 @@ int CANMDPeripheral::get_particular_bit(unsigned char *data, int bit_number)
         return 0;
 }
 
-void CANMDPeripheral::adjust()
+void CANMotorPeripheral::adjust()
 {
     if (_has_recieved_initial_value == false)
         return;
@@ -263,7 +263,7 @@ void CANMDPeripheral::adjust()
     _led->write(tmp_state);
 }
 
-void CANMDPeripheral::release_time_dec()
+void CANMotorPeripheral::release_time_dec()
 {
     if (_time_out_count == 0)
     {
@@ -281,12 +281,12 @@ void CANMDPeripheral::release_time_dec()
     }
 }
 
-int CANMDPeripheral::has_recieved_initial_value()
+int CANMotorPeripheral::has_recieved_initial_value()
 {
     return _has_recieved_initial_value;
 }
 
-float CANMDPeripheral::convert_level(int level)
+float CANMotorPeripheral::convert_level(int level)
 {
     // switch (level)
     // {
@@ -314,7 +314,7 @@ float CANMDPeripheral::convert_level(int level)
     return value;
 }
 
-float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
+float CANMotorPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
 {
     uint16_t bit_stream = 0;
     //    int subscript = bit_number / 8;
@@ -328,7 +328,7 @@ float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
     return bfloat16::bfloat16_to_float32(bit_stream);
 }
 
-int CANMDPeripheral::int_decode(unsigned char *data, int bit_number, int length)
+int CANMotorPeripheral::int_decode(unsigned char *data, int bit_number, int length)
 {
     uint32_t bit_stream = 0;
     //    int subscript = bit_number / 8;

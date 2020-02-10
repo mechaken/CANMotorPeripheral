@@ -1,14 +1,14 @@
-#ifndef CAN_MD_PERIPHERAL
-#define CAN_MD_PERIPHERAL
+#ifndef CAN_MOTOR_PERIPHERAL
+#define CAN_MOTOR_PERIPHERAL
 
 #include "mbed.h"
 #include "A3921.h"
 
-class CANMDPeripheral : public A3921
+class CANMotorPeripheral : public A3921
 {
 public:
-    CANMDPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset, PinName ledh, PinName ledl);
-    ~CANMDPeripheral();
+    CANMotorPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset, PinName ledh, PinName ledl);
+    ~CANMotorPeripheral();
 
     void id(int value);
     int id();
