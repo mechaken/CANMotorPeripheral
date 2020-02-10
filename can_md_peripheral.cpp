@@ -3,15 +3,16 @@
 #include "bfloat16.h"
 
 CANMDPeripheral::CANMDPeripheral(CAN &can_obj, PinName sr, PinName pwmh, PinName pwml, PinName phase, PinName reset, PinName ledh, PinName ledl)
-    : A3921(sr, pwmh, pwml, phase, reset), _can_p(NULL), _can(can_obj), _ledh(ledh), _ledl(ledl)
+    : A3921(sr, pwmh, pwml, phase, reset), _can_p(NULL), _can(can_obj)
 {
+    _led = new BusOut(ledh, ledl);
     _rise_unit = convert_level(_rise_level);
     _fall_unit = convert_level(_fall_level);
 }
 
 CANMDPeripheral::~CANMDPeripheral()
 {
-//    delete _led;
+    delete _led;
 }
 
 void CANMDPeripheral::id(int value)
@@ -39,14 +40,14 @@ int CANMDPeripheral::connect()
     int value = _can.write(_msg); // 初期設定値の送信を要求
 
     // 初期設定の通信が終わるまでLEDをチカチカさせる
-//    if (_led->read() != 1)
-//    {
-//        _led->write(1);
-//    }
-//    else
-//    {
-//        _led->write(3);
-//    }
+    if (_led->read() != 1)
+    {
+        _led->write(1);
+    }
+    else
+    {
+        _led->write(2);
+    }
 
     return value;
 }
@@ -68,7 +69,7 @@ int CANMDPeripheral::decode_can_message(unsigned char *data)
 
     adjust();
 
-    // debug("%0.3f,%d\r", _duty_cycle,_state);
+    // debug("d %0.3f, s %d\r", _duty_cycle,_state);
 
     return 0;
 }
@@ -259,8 +260,7 @@ void CANMDPeripheral::adjust()
 
     // debug("%f,%d\r",tmp_duty_cycle, tmp_state);
     hal_set(tmp_duty_cycle, tmp_state);
-//    _led->write(tmp_state);
-    led_write(tmp_state);
+    _led->write(tmp_state);
 }
 
 void CANMDPeripheral::release_time_dec()
@@ -272,7 +272,8 @@ void CANMDPeripheral::release_time_dec()
         // hal_setしないのは急な停止をさせないため（adjust()でだんだんと止めていく）
         _state = Brake;
         _duty_cycle = 0.0f;
-        // led_write(Brake);
+        _led->write(Brake);
+        // printf("release\n");
     }
     else
     {
@@ -311,15 +312,6 @@ float CANMDPeripheral::convert_level(int level)
     }
 
     return value;
-}
-
-void CANMDPeripheral::led_write(int value)
-{
-//    _ledh.write((value>> 1) & 1);
-//    _ledl.write(value & 1);
-    printf("%d\r",value);
-    _ledh = (value >> 1) & 1;
-    _ledl = value & 1;
 }
 
 float CANMDPeripheral::bfloat16_decode(unsigned char *data, int bit_number)
