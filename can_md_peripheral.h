@@ -23,10 +23,12 @@ protected:
     float convert_level(int level);
 
 private:
-    BusOut *_led;
+    // BusOut *_led; 100%->90%-> ... -> 0% -> 100% ...と繰り返すからいったんDigitalOutに変更
     CAN *_can_p;
     CAN &_can;
     CANMessage _msg;
+    DigitalOut _ledh;
+    DigitalOut _ledl;
 
     int _id;
     float _rise_unit;
@@ -38,6 +40,7 @@ private:
 
     int _switching_wait_count_ms;
 
+    void led_write(int value);
     int decode_extention_headers(unsigned char *data, int bit_number);
     int pwm_up_down(float now_duty_cycle, float goal_duty_cycle);
     int get_particular_bit(unsigned char *data, int bit_number);
