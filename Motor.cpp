@@ -22,8 +22,7 @@ void Motor::init()
 
 void Motor::duty_cycle(float value)
 {
-    if ((0.00f <= value) && (value <= 1.00f))
-    {
+    if ((0.00f <= value) && (value <= 1.00f)) {
         _duty_cycle = value;
     }
 }
@@ -35,8 +34,7 @@ float Motor::duty_cycle() const
 
 void Motor::state(int type)
 {
-    if ((0 <= type) && (type < TotalState))
-    {
+    if ((0 <= type) && (type < TotalState)) {
         _state = (State)type;
     }
 }
@@ -48,8 +46,7 @@ int Motor::state() const
 
 void Motor::rise_level(int level)
 {
-    if ((0 <= level) && (level < TotalDutyCycleChangeLevel))
-    {
+    if ((0 <= level) && (level < TotalDutyCycleChangeLevel)) {
         _rise_level = (DutyCycleChangeLevel)level;
     }
 }
@@ -61,8 +58,7 @@ int Motor::rise_level() const
 
 void Motor::fall_level(int level)
 {
-    if ((0 <= level) && (level < TotalDutyCycleChangeLevel))
-    {
+    if ((0 <= level) && (level < TotalDutyCycleChangeLevel)) {
         _fall_level = (DutyCycleChangeLevel)level;
     }
 }
@@ -74,8 +70,7 @@ int Motor::fall_level() const
 
 void Motor::pulse_period(float seconds)
 {
-    if ((0 < seconds) && (seconds <= max_pulse_period))
-    {
+    if ((0 < seconds) && (seconds <= max_pulse_period)) {
         _pulse_period = seconds;
     }
 }
@@ -92,8 +87,7 @@ void Motor::release_time_ms(float ms)
 
 void Motor::control(int value)
 {
-    if ((0 <= value) && (value < TotalControl))
-    {
+    if ((0 <= value) && (value < TotalControl)) {
         _control = (Control)value;
     }
 }

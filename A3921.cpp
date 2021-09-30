@@ -58,38 +58,37 @@ void A3921::hal_set(float duty_cycle, int state)
     //        break;
     //    }
 
-    switch (_state)
-    {
-    case Free:
-        _pwmh = 0.0f;
-        _pwml = 0.0f;
+    switch (_state) {
+        case Free:
+            _pwmh = 0.0f;
+            _pwml = 0.0f;
 
-        _hal_duty_cycle = 0.0f;
-        break;
-    case CW:
-        _phase = 1; // a to b
-        _pwmh = _duty_cycle;
-        _pwml = _duty_cycle;
+            _hal_duty_cycle = 0.0f;
+            break;
+        case CW:
+            _phase = 1; // a to b
+            _pwmh = _duty_cycle;
+            _pwml = _duty_cycle;
 
-        _hal_duty_cycle = _duty_cycle;
-        break;
-    case CCW:
-        _phase = 0; // b to a
-        _pwmh = _duty_cycle;
-        _pwml = _duty_cycle;
+            _hal_duty_cycle = _duty_cycle;
+            break;
+        case CCW:
+            _phase = 0; // b to a
+            _pwmh = _duty_cycle;
+            _pwml = _duty_cycle;
 
-        _hal_duty_cycle = _duty_cycle;
-        break;
-    case Brake:
-        _pwmh = 0.0f;
-        _pwml = 0.0f;
+            _hal_duty_cycle = _duty_cycle;
+            break;
+        case Brake:
+            _pwmh = 0.0f;
+            _pwml = 0.0f;
 
-        _hal_duty_cycle = 0.0f;
-        break;
-    default:
-        _hal_duty_cycle = -1.0f;
-        _hal_state = -1;
-        break;
+            _hal_duty_cycle = 0.0f;
+            break;
+        default:
+            _hal_duty_cycle = -1.0f;
+            _hal_state = -1;
+            break;
     }
     //     }
 }
@@ -106,8 +105,7 @@ int A3921::hal_state()
 
 void A3921::hal_pulse_period(float seconds)
 {
-    if ((0 < seconds) && (seconds <= max_pulse_period))
-    {
+    if ((0 < seconds) && (seconds <= max_pulse_period)) {
         _pwmh.period(seconds);
         _pwml.period(seconds);
     }

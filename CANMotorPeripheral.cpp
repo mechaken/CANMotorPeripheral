@@ -102,7 +102,9 @@ void CANMotorPeripheral::adjust()
     // debug("%f,%d\r",tmp_duty_cycle, tmp_state);
     hal_set(tmp_duty_cycle, tmp_state);
 
-    _led->write(tmp_state);
+    if (_time_out_count != 0) {
+        _led->write(tmp_state);
+    }
 }
 
 void CANMotorPeripheral::release_time_dec()

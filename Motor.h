@@ -11,8 +11,7 @@
 class Motor
 {
 public:
-    enum State
-    {
+    enum State {
         Free,
         CW,  // Clock Wise
         CCW, // Counter Clock Wise
@@ -21,8 +20,7 @@ public:
         TotalState,
     };
 
-    enum DutyCycleChangeLevel
-    {
+    enum DutyCycleChangeLevel {
         OFF = 0,
         Low = 2,
         Middle = 4,
@@ -32,8 +30,7 @@ public:
         TotalDutyCycleChangeLevel,
     };
 
-    enum Control
-    {
+    enum Control {
         SlowDecay,
         MixedDecay,
         FastDecay,
