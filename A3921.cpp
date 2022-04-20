@@ -60,12 +60,14 @@ void A3921::hal_set(float duty_cycle, int state)
 
     switch (_state) {
         case Free:
+            _sr = 0;
             _pwmh = 0.0f;
             _pwml = 0.0f;
 
             _hal_duty_cycle = 0.0f;
             break;
         case CW:
+            _sr = 0;
             _phase = 1; // a to b
             _pwmh = _duty_cycle;
             _pwml = _duty_cycle;
@@ -73,6 +75,7 @@ void A3921::hal_set(float duty_cycle, int state)
             _hal_duty_cycle = _duty_cycle;
             break;
         case CCW:
+            _sr = 0;
             _phase = 0; // b to a
             _pwmh = _duty_cycle;
             _pwml = _duty_cycle;
@@ -80,9 +83,12 @@ void A3921::hal_set(float duty_cycle, int state)
             _hal_duty_cycle = _duty_cycle;
             break;
         case Brake:
+            //_pwmh = 0.0f;
+            //_pwml = 0.0f;
+            _sr = 1;
             _pwmh = 0.0f;
-            _pwml = 0.0f;
-
+            _pwml = 1.0f;
+            
             _hal_duty_cycle = 0.0f;
             break;
         default:

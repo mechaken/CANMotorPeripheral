@@ -93,10 +93,10 @@ void Motor::control(int value)
 }
 
 const int Motor::default_state = Brake;
-const int Motor::default_duty_cycle_chenge_level = OFF;
+const int Motor::default_duty_cycle_chenge_level = High;
 const float Motor::default_pulse_period = 0.00002f;
 const float Motor::default_frequency = 1.0f / default_pulse_period;
-const float Motor::defalut_release_time_ms = 100.0f;
+const float Motor::defalut_release_time_ms = 1000.0f;
 const int Motor::default_control = SlowDecay;
 
 const float Motor::max_pulse_period = 60000.0f;

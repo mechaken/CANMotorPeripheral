@@ -151,7 +151,7 @@ float CANMotorPeripheral::convert_level(int level)
         return 0.0f;
     }
 
-    float value = .02f;
+    float value = .002f;
     for (int i = 0; i < level; i++) {
         value *= 0.7f;
     }
